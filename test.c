@@ -66,7 +66,7 @@ int main (void) {
   size_t read;
   
   while ((read = fread(in, 1, BLOCK_SIZE, fi)) == BLOCK_SIZE) {
-    zwes_encrypt(ctx, iv, out);
+    anemone_encrypt(ctx, iv, out);
     
     strxor(out, in, BLOCK_SIZE);
     
