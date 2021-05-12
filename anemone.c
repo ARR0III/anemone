@@ -1,5 +1,5 @@
 /*
-  Block crypt algoritm Anemone-1;
+  Block cipher algoritm Anemone-1;
   SP-cipher;
   
   block =  16 byte;
