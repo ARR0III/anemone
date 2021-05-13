@@ -18,7 +18,7 @@
   #include <string.h>
 #endif
 
-#include "anemone.c"
+#include "src/anemone.c"
 
 int main (void) {
   size_t ctx_len = sizeof(ZWES_CTX);
@@ -28,10 +28,10 @@ int main (void) {
     return -1;
   }
   
-  uint8_t password[]      = "0123456789abcdee";
+  uint8_t password[]      = "aaaaaaaaaaaaaaaa";
   uint8_t out[BLOCK_SIZE] = {0x00};
   uint8_t in [BLOCK_SIZE] = {0x00};
-  uint8_t iv [BLOCK_SIZE] = "fedcba9876543210";
+  uint8_t iv [BLOCK_SIZE] = "aaaaaaaaaaaaaaaa";
   
   anemone_init(ctx, password, 16, 0x00);
   
@@ -45,7 +45,7 @@ int main (void) {
   printf("CT:");
   printhex(HEX_STRING, out, BLOCK_SIZE);
   
-  ++in[0];
+  in[15]++;
   
   anemone_init(ctx, password, 16, 0x00);
   anemone_encrypt(ctx, in, out);
@@ -83,3 +83,4 @@ int main (void) {
   */
   return 0;
 }
+
