@@ -18,7 +18,7 @@
   #include <string.h>
 #endif
 
-#include "src/anemone.c"
+#include "anemone.c"
 
 int main (void) {
   size_t ctx_len = sizeof(ZWES_CTX);
