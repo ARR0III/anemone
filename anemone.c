@@ -1,5 +1,5 @@
 /*
-  Block cipher algoritm Anemone-1;
+  Block crypt algoritm Anemone-1;
   SP-cipher;
   
   block =  16 byte;
@@ -54,15 +54,16 @@ void anemone_init(ZWES_CTX * ctx, uint8_t * key, int key_len, int operation) {
   if (operation == 0xDE) {
     ctx->position = KEY_LENGTH - (BLOCK_SIZE / 2);
   }
-  else
+  else {
     ctx->position = 0;
+  }
   
   for (i = 0; i < KEY_LENGTH; ++i) {
     ctx->table[i] = (uint8_t)i;
   }
 
   for (i = 0; i < KEY_LENGTH; ++i) {
-    k    = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k % BLOCK_SIZE] + k;
+    k = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k % BLOCK_SIZE] + k;
     
     swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k % KEY_LENGTH]);
   }
@@ -356,14 +357,12 @@ void anemone_encrypt(ZWES_CTX * ctx, uint8_t * in, uint8_t * out) {
   for (int i = 0; i < Rounds; ++i) {
     add(temp);
     sp_en(ctx, temp);
-    
-    //printhex(HEX_STRING, temp, BLOCK_SIZE);
-    
-    loss(temp);
+
+    //loss(temp);
     sonne(temp);
     
     tornado((uint32_t*)temp);
-
+    
     box_left(temp);
     table_left(temp);  
     
@@ -389,10 +388,12 @@ void anemone_decrypt(ZWES_CTX * ctx, uint8_t * in, uint8_t * out) {
     tornado((uint32_t*)temp); 
     
     sonne(temp);
-    loss(temp);
+    //loss(temp);
     
     sp_de(ctx, temp);
     sub(temp);
+    
+    //printhex(HEX_STRING, temp, BLOCK_SIZE); printf("};\n");
   }
   
   memcpy(out, temp, BLOCK_SIZE);
