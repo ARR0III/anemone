@@ -171,7 +171,7 @@ void sp_de(ZWES_CTX * ctx, uint8_t * temp) {
 /* 1   2  3  4     5  6  7  8 
    5   6  7  8     1  2  3  4 -^
    9  10 11 12    13 14 15 16
-   13 14 15 16 -> 13 14 15 16 -^ */
+   13 14 15 16 ->  9 10 11 12 -^ */
 void tornado(uint32_t * temp) {
   uint32_t t = *(temp + 0);
   *(temp + 0) = *(temp + 1);
@@ -392,8 +392,6 @@ void anemone_decrypt(ZWES_CTX * ctx, uint8_t * in, uint8_t * out) {
     
     sp_de(ctx, temp);
     sub(temp);
-    
-    //printhex(HEX_STRING, temp, BLOCK_SIZE); printf("};\n");
   }
   
   memcpy(out, temp, BLOCK_SIZE);
