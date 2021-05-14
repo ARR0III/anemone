@@ -30,7 +30,7 @@ typedef struct {
   int32_t  operation;
   int32_t  position;
   uint8_t  table[KEY_LENGTH];
-} ZWES_CTX;
+} ANEMONE_CTX;
 
 uint8_t zbox[] = {
  0x0F, 0x4B, 0x87, 0xC3,
@@ -46,7 +46,7 @@ void swap (uint8_t * a, uint8_t * b) {
   *b = t;
 }
 
-void anemone_init(ZWES_CTX * ctx, uint8_t * key, int key_len, int operation) {
+void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) {
   uint32_t i, k = 0;
 
   ctx->operation = operation;
@@ -69,18 +69,20 @@ void anemone_init(ZWES_CTX * ctx, uint8_t * key, int key_len, int operation) {
   }
 }
 
-void pos_de(ZWES_CTX * ctx) {
+void pos_de(ANEMONE_CTX * ctx) {
   ctx->position -= (BLOCK_SIZE / 2);
   
-  if (ctx->position < 0)
+  if (ctx->position < 0) {
     ctx->position = KEY_LENGTH - (BLOCK_SIZE / 2);
+  }
 }
 
-void pos_en(ZWES_CTX * ctx) {
+void pos_en(ANEMONE_CTX * ctx) {
   ctx->position += (BLOCK_SIZE / 2);
     
-  if (ctx->position >= KEY_LENGTH)
+  if (ctx->position >= KEY_LENGTH) {
     ctx->position = 0;
+  }
 }
 
 /* reverse buffer 01234567 -> 76543210 */
@@ -101,9 +103,30 @@ void reverse(uint8_t * temp) {
  temp[3] = temp[4];
  temp[4] = t;
 }
+/*
+  Функция FX(x) создает 32-битную гамму, зависящую от
+  открытого текста/шифротекста, 8-битного значения таблицы
+  "размытия" и байта ключа шифрования, для последующего
+  объединения битовым xor с 32-битным значением раундового
+  ключа.
+*/
+uint32_t FX(ANEMONE_CTX * ctx, uint32_t X) {
+/*
+  if x == 0 then {
+    t =  table[???];
+    t = (0 + t) ^ zbox[???];
+    
+    return (0 * t);
+  }
+*/
+  uint8_t t = ctx->table[(X >> 24) ^ (X & 0x000000FF)]; /* if (x == 0) t = table[?] */
+          t = (X + (uint32_t)t) ^ (uint32_t)(zbox[t % BLOCK_SIZE]);
+          
+  return (uint32_t)(X * t);
+}
 
 /* Substitution-Permutation network */
-void sp_en(ZWES_CTX * ctx, uint8_t * temp) {
+void sp_en(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t t;
     
   uint32_t * L0 = (uint32_t *)temp + 0; // 1
@@ -115,7 +138,7 @@ void sp_en(ZWES_CTX * ctx, uint8_t * temp) {
   uint32_t KEY;
   
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 0) ^ *R0;
+  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 0) ^ FX(ctx, *R0); /* ^ *R0; */
   *L0 += KEY;
   /*---------------------------------------------------*/
   
@@ -124,7 +147,7 @@ void sp_en(ZWES_CTX * ctx, uint8_t * temp) {
   *R0 = t;
   
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 1) ^ *R1;
+  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 1) ^ FX(ctx, *R1); /* ^ *R1; */
   *L1 += KEY;
   /*---------------------------------------------------*/
   
@@ -136,7 +159,7 @@ void sp_en(ZWES_CTX * ctx, uint8_t * temp) {
 }
 
 /* Substitution-Permutation network */
-void sp_de(ZWES_CTX * ctx, uint8_t * temp) {
+void sp_de(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t t;
     
   uint32_t * L0 = (uint32_t *)temp + 0; // 1
@@ -148,7 +171,7 @@ void sp_de(ZWES_CTX * ctx, uint8_t * temp) {
   uint32_t KEY;
   
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 0) ^ *L0;
+  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 0) ^ FX(ctx, *L0); /* ^ *L0; */
   *R0 -= KEY;
   /*---------------------------------------------------*/
   
@@ -157,7 +180,7 @@ void sp_de(ZWES_CTX * ctx, uint8_t * temp) {
   *R0 = t;
   
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 1) ^ *L1;
+  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 1) ^ FX(ctx, *L1); /* ^ *L1; */
   *R1 -= KEY;
   /*---------------------------------------------------*/
   
@@ -168,10 +191,10 @@ void sp_de(ZWES_CTX * ctx, uint8_t * temp) {
   pos_de(ctx);
 }
 
-/* 1   2  3  4     5  6  7  8 
-   5   6  7  8     1  2  3  4 -^
-   9  10 11 12    13 14 15 16
-   13 14 15 16 ->  9 10 11 12 -^ */
+/*  1  2  3  4     5  6  7  8 
+    5  6  7  8     1  2  3  4
+    9 10 11 12    13 14 15 16
+   13 14 15 16 ->  9 10 11 12 */
 void tornado(uint32_t * temp) {
   uint32_t t = *(temp + 0);
   *(temp + 0) = *(temp + 1);
@@ -182,10 +205,10 @@ void tornado(uint32_t * temp) {
   *(temp + 2) = t;
 }
 
-/* 1   2  3  4     1  3  2  4
-   5   6  7  8     9  6  7 12
-   9  10 11 12     5 10 11  8
-   13 14 15 16 -> 13 15 14 16 */
+/* 1  2  3  4     1  3  2  4
+   5  6  7  8     9  6  7 12
+   9 10 11 12     5 10 11  8
+  13 14 15 16 -> 13 15 14 16 */
 void loss(uint8_t * temp) {
   uint8_t t = temp[1];
   temp[1] = temp[2];
@@ -226,10 +249,10 @@ void sonne(uint8_t * temp) {
   temp[9] = t;
 }
 
-/*  1  2  3  4     2  3  4  1 <- 1
-    5  6  7  8     8  5  6  7 -> 1
-    9 10 11 12    10 11 12  9 <- 1
-   13 14 15 16 -> 16 13 14 15 -> 1 */
+/* 1  2  3  4     2  3  4  1 <- 1
+   5  6  7  8     8  5  6  7 -> 1
+   9 10 11 12    10 11 12  9 <- 1
+  13 14 15 16 -> 16 13 14 15 -> 1 */
 void table_right(uint8_t * temp) {
     uint8_t t = temp[0];
     temp[0] = temp[1];
@@ -345,17 +368,18 @@ void add(uint8_t * temp) {
 }
 
 void sub(uint8_t * temp) {
-  for (int i = 0; i < BLOCK_SIZE; ++i)
+  for (int i = 0; i < BLOCK_SIZE; ++i) {
     temp[i] -= zbox[i] ^ (i + 1);
+  }
 }
 
-void anemone_encrypt(ZWES_CTX * ctx, uint8_t * in, uint8_t * out) {
+void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   uint8_t temp[BLOCK_SIZE];
 
   memcpy(temp, in, BLOCK_SIZE);
   
   for (int i = 0; i < Rounds; ++i) {
-    add(temp);
+    //add(temp);
     sp_en(ctx, temp);
 
     //loss(temp);
@@ -364,35 +388,40 @@ void anemone_encrypt(ZWES_CTX * ctx, uint8_t * in, uint8_t * out) {
     tornado((uint32_t*)temp);
     
     box_left(temp);
-    table_left(temp);  
+    table_left(temp);
     
     reverse(temp);
     reverse(temp + 8);
+    
+    //printhex(HEX_STRING, temp, BLOCK_SIZE);
   }
   
   memcpy(out, temp, BLOCK_SIZE);
 }
 
-void anemone_decrypt(ZWES_CTX * ctx, uint8_t * in, uint8_t * out) {
+void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   uint8_t temp[BLOCK_SIZE];
   
   memcpy(temp, in, BLOCK_SIZE);
   
-  for (int i = 0; i < Rounds; ++i) {     
+  for (int i = 0; i < Rounds; ++i) {
     reverse(temp + 8);
     reverse(temp);
     
     table_right(temp);
     box_right(temp);
     
-    tornado((uint32_t*)temp); 
+    tornado((uint32_t*)temp);
     
     sonne(temp);
     //loss(temp);
     
     sp_de(ctx, temp);
-    sub(temp);
+    //sub(temp);
+    
+    //printhex(HEX_STRING, temp, BLOCK_SIZE);
   }
   
   memcpy(out, temp, BLOCK_SIZE);
 }
+
