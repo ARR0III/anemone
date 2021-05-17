@@ -29,6 +29,7 @@
 typedef struct {
   int32_t  operation;
   int32_t  position;
+  uint32_t white[4];
   uint8_t  table[KEY_LENGTH];
 } ANEMONE_CTX;
 
@@ -61,11 +62,19 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
   for (i = 0; i < KEY_LENGTH; ++i) {
     ctx->table[i] = (uint8_t)i;
   }
-
+  
   for (i = 0; i < KEY_LENGTH; ++i) {
     k = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k % BLOCK_SIZE] + k;
     
     swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k % KEY_LENGTH]);
+  }
+  
+  for (i = 0; i < 4; i++) {
+    ctx->white[i] = 0x00000000;
+    
+    for (int j = 0; j < (KEY_LENGTH / 4); j += 4) {
+      ctx->white[i] ^= *(((uint32_t *)&ctx->table[0]) + i + j);
+    }
   }
 }
 
@@ -85,24 +94,6 @@ void pos_en(ANEMONE_CTX * ctx) {
   }
 }
 
-/* reverse buffer 01234567 -> 76543210 */
-void reverse(uint8_t * temp) {
- uint8_t t = temp[0];
- temp[0] = temp[7];
- temp[7] = t;
-
- t = temp[1];
- temp[1] = temp[6];
- temp[6] = t;
- 
- t =  temp[2];
- temp[2] = temp[5];
- temp[5] = t;
- 
- t = temp[3];
- temp[3] = temp[4];
- temp[4] = t;
-}
 /*
   Функция FX(x) создает 32-битную гамму, зависящую от
   открытого текста/шифротекста, 8-битного значения таблицы
@@ -113,13 +104,13 @@ void reverse(uint8_t * temp) {
 uint32_t FX(ANEMONE_CTX * ctx, uint32_t X) {
 /*
   if x == 0 then {
-    t =  table[???];
-    t = (0 + t) ^ zbox[???];
+    t =  table[0]; ???
+    t = (0 + ???) ^ zbox[???];
     
-    return (0 * t);
+    return (0 * ???); == 0;
   }
 */
-  uint8_t t = ctx->table[(X >> 24) ^ (X & 0x000000FF)]; /* if (x == 0) t = table[?] */
+  uint8_t t = ctx->table[(X >> 24) ^ (X & 0x000000FF)];
           t = (X + (uint32_t)t) ^ (uint32_t)(zbox[t % BLOCK_SIZE]);
           
   return (uint32_t)(X * t);
@@ -191,42 +182,6 @@ void sp_de(ANEMONE_CTX * ctx, uint8_t * temp) {
   pos_de(ctx);
 }
 
-/*  1  2  3  4     5  6  7  8 
-    5  6  7  8     1  2  3  4
-    9 10 11 12    13 14 15 16
-   13 14 15 16 ->  9 10 11 12 */
-void tornado(uint32_t * temp) {
-  uint32_t t = *(temp + 0);
-  *(temp + 0) = *(temp + 1);
-  *(temp + 1) = t;
-  
-  t = *(temp + 3);
-  *(temp + 3) = *(temp + 2);
-  *(temp + 2) = t;
-}
-
-/* 1  2  3  4     1  3  2  4
-   5  6  7  8     9  6  7 12
-   9 10 11 12     5 10 11  8
-  13 14 15 16 -> 13 15 14 16 */
-void loss(uint8_t * temp) {
-  uint8_t t = temp[1];
-  temp[1] = temp[2];
-  temp[2] = t;
-  
-  t = temp[13];
-  temp[13] = temp[14];
-  temp[14] = t;
-  
-  t = temp[4];
-  temp[4] = temp[8];
-  temp[8] = t;
-  
-  t = temp[7];
-  temp[7] = temp[11];
-  temp[11] = t;
-}
-
 /*  1  2  3  4   16  2  3 13
     5  6  7  8    5 11 10  8
     9 10 11 12    9  7  6 12
@@ -248,128 +203,16 @@ void sonne(uint8_t * temp) {
   temp[6] = temp[9];
   temp[9] = t;
 }
-
-/* 1  2  3  4     2  3  4  1 <- 1
-   5  6  7  8     8  5  6  7 -> 1
-   9 10 11 12    10 11 12  9 <- 1
-  13 14 15 16 -> 16 13 14 15 -> 1 */
-void table_right(uint8_t * temp) {
-    uint8_t t = temp[0];
-    temp[0] = temp[1];
-    temp[1] = temp[2];
-    temp[2] = temp[3];
-    temp[3] = t;
+/*
+  Процедура отбеливания входных данных,
+  объединением с white-таблицей, сгенерированной
+  из 256-байтного ключа шифрования.
+*/
+void whitening(ANEMONE_CTX * ctx, uint8_t * temp) {
+  uint32_t * ptemp = (uint32_t *)temp;
   
-    t = temp[7];
-    temp[7] = temp[6];
-    temp[6] = temp[5];
-    temp[5] = temp[4];
-    temp[4] = t;
-  
-    t = temp[8];
-    temp[8]  = temp[9];
-    temp[9]  = temp[10];
-    temp[10] = temp[11];
-    temp[11] = t;
-  
-    t = temp[15];
-    temp[15] = temp[14];
-    temp[14] = temp[13];
-    temp[13] = temp[12];
-    temp[12] = t;
-}
-
-void box_left(uint8_t * temp) {
-  uint8_t t = temp[0];
-    temp[0]  = temp[10];
-    temp[10] = t;
-    
-    t = temp[1];
-    temp[1]  = temp[4];
-    temp[4]  = temp[13];
-    temp[13] = temp[11];
-    temp[11] = temp[14];
-    temp[14] = temp[7];
-    temp[7]  = t;
-
-    t = temp[2];
-    temp[2] = temp[8];
-    temp[8] = t;
-    
-    t = temp[3];
-    temp[3]  = temp[12];
-    temp[12] = temp[15];
-    temp[15] = t;
-    
-    t = temp[5];
-    temp[5] = temp[9];
-    temp[9] = temp[6];
-    temp[6] = t;
-}
-
-void box_right(uint8_t * temp) {
-    uint8_t t = temp[1];
-    temp[1]  = temp[7];
-    temp[7]  = temp[14];
-    temp[14] = temp[11];
-    temp[11] = temp[13];
-    temp[13] = temp[4];
-    temp[4]  = t;
-    
-    t = temp[2];
-    temp[2] = temp[8];
-    temp[8] = t;
-    
-    t = temp[3];
-    temp[3]  = temp[15];
-    temp[15] = temp[12];
-    temp[12] = t;
-    
-    t = temp[5];
-    temp[5] = temp[6];
-    temp[6] = temp[9];
-    temp[9] = t;
-    
-    t = temp[0];
-    temp[0]  = temp[10];
-    temp[10] = t;
-}
-
-void table_left(uint8_t * temp) {
-    uint8_t t = temp[3];
-    temp[3] = temp[2];
-    temp[2] = temp[1];
-    temp[1] = temp[0];
-    temp[0] = t;
-  
-    t = temp[4];
-    temp[4] = temp[5];
-    temp[5] = temp[6];
-    temp[6] = temp[7];
-    temp[7] = t;
-  
-    t = temp[11];
-    temp[11] = temp[10];
-    temp[10] = temp[9];
-    temp[9] = temp[8];
-    temp[8] = t;
-  
-    t = temp[12];
-    temp[12] = temp[13];
-    temp[13] = temp[14];
-    temp[14] = temp[15];
-    temp[15] = t;
-}
-
-void add(uint8_t * temp) {
-  for (int i = 0; i < BLOCK_SIZE; ++i) {
-    temp[i] += zbox[i] ^ (i + 1);
-  }
-}
-
-void sub(uint8_t * temp) {
-  for (int i = 0; i < BLOCK_SIZE; ++i) {
-    temp[i] -= zbox[i] ^ (i + 1);
+  for (int i = 0; i < 4; i++) {
+    *(ptemp + i) ^= ctx->white[i];
   }
 }
 
@@ -378,22 +221,13 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
 
   memcpy(temp, in, BLOCK_SIZE);
   
+  whitening(ctx, temp);
+  
   for (int i = 0; i < Rounds; ++i) {
-    //add(temp);
     sp_en(ctx, temp);
-
-    //loss(temp);
     sonne(temp);
     
-    tornado((uint32_t*)temp);
-    
-    box_left(temp);
-    table_left(temp);
-    
-    reverse(temp);
-    reverse(temp + 8);
-    
-    //printhex(HEX_STRING, temp, BLOCK_SIZE);
+    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
   
   memcpy(out, temp, BLOCK_SIZE);
@@ -405,22 +239,13 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   memcpy(temp, in, BLOCK_SIZE);
   
   for (int i = 0; i < Rounds; ++i) {
-    reverse(temp + 8);
-    reverse(temp);
-    
-    table_right(temp);
-    box_right(temp);
-    
-    tornado((uint32_t*)temp);
-    
     sonne(temp);
-    //loss(temp);
-    
     sp_de(ctx, temp);
-    //sub(temp);
     
-    //printhex(HEX_STRING, temp, BLOCK_SIZE);
+    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
+
+  whitening(ctx, temp);
   
   memcpy(out, temp, BLOCK_SIZE);
 }
