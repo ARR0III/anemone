@@ -18,11 +18,11 @@
   #include <string.h>
 #endif
 
-#include "anemone.c"
+#include "src/anemone.c"
 
 int main (void) {
-  size_t ctx_len = sizeof(ZWES_CTX);
-  ZWES_CTX * ctx = (ZWES_CTX *)calloc(1, ctx_len);
+  size_t ctx_len = sizeof(ANEMONE_CTX);
+  ANEMONE_CTX * ctx = (ANEMONE_CTX *)calloc(1, ctx_len);
   
   if (NULL == ctx) {
     return -1;
@@ -31,12 +31,12 @@ int main (void) {
   uint8_t password[]      = "aaaaaaaaaaaaaaaa";
   uint8_t out[BLOCK_SIZE] = {0x00};
   uint8_t in [BLOCK_SIZE] = {0x00};
-  uint8_t iv [BLOCK_SIZE] = "aaaaaaaaaaaaaaaa";
-  
+
   anemone_init(ctx, password, 16, 0x00);
   
   printf("KEY:\n");
-  printhex(HEX_TABLE, (char*)ctx + (sizeof(int32_t) * 2), ctx_len - (sizeof(int32_t) * 2));
+  printhex(HEX_TABLE, (char*)ctx + (sizeof(int32_t) * 4) + (sizeof(int32_t) * 2), 
+                         ctx_len - (sizeof(int32_t) * 4) - (sizeof(int32_t) * 2));
   
   printf("PT:");
   printhex(HEX_STRING, in, BLOCK_SIZE);
@@ -45,7 +45,8 @@ int main (void) {
   printf("CT:");
   printhex(HEX_STRING, out, BLOCK_SIZE);
   
-  in[15]++;
+  
+  in[0]++;
   
   anemone_init(ctx, password, 16, 0x00);
   anemone_encrypt(ctx, in, out);
@@ -59,28 +60,7 @@ int main (void) {
   printf("\nDE:");
   printhex(HEX_STRING, in, BLOCK_SIZE);
   
-  /*
-  FILE * fi = fopen("temp", "rb");
-  FILE * fo = fopen("temp.en", "wr");
-  
-  size_t read;
-  
-  while ((read = fread(in, 1, BLOCK_SIZE, fi)) == BLOCK_SIZE) {
-    anemone_encrypt(ctx, iv, out);
-    
-    strxor(out, in, BLOCK_SIZE);
-    
-    fwrite(out, 1, read, fo);
-    fflush(fo);
-    
-    memcpy(iv, out, BLOCK_SIZE);
-  }
-  
-  fclose(fi);
-  fclose(fo);
-  
   free(ctx);
-  */
   return 0;
 }
 
