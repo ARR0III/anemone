@@ -5,20 +5,9 @@
   block =  16 byte;
   key   = 256 byte;
 */
-#ifndef _C_STDIO_H_
-#define _C_STDIO_H_
-  #include <stdio.h>
-#endif
-
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif
-
-#ifndef _C_STDLIB_H_
-#define _C_STDLIB_H_
-  #include <stdlib.h>
-#endif
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "xtalw.h"
 
@@ -59,16 +48,19 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
     ctx->position = 0;
   }
   
+  /* write data in table */
   for (i = 0; i < KEY_LENGTH; ++i) {
     ctx->table[i] = (uint8_t)i;
   }
   
+  /* swap bytes key table*/
   for (i = 0; i < KEY_LENGTH; ++i) {
     k = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k % BLOCK_SIZE] + k;
     
     swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k % KEY_LENGTH]);
   }
   
+  /* make whitening table */
   for (i = 0; i < 4; i++) {
     ctx->white[i] = 0x00000000;
     
