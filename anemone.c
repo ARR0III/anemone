@@ -106,7 +106,7 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X) {
   return (uint32_t)(X * t);
 }
 
-/* Substitution-Permutation network */
+/* Feistel network for 128 bits */
 void sp_en(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t t;
     
@@ -139,7 +139,7 @@ void sp_en(ANEMONE_CTX * ctx, uint8_t * temp) {
   pos_en(ctx);
 }
 
-/* Substitution-Permutation network */
+/* Feistel network for 128 bits */
 void sp_de(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t t;
     
