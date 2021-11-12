@@ -5,13 +5,14 @@
   block =  16 byte;
   key   = 256 byte;
 */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "xtalw.h"
 
-#define Rounds      32
+#define Rounds      32 /* 16 Rounds = OK */
 #define BLOCK_SIZE  16
 #define KEY_LENGTH 256
 
@@ -37,7 +38,7 @@ void swap (uint8_t * a, uint8_t * b) {
 }
 
 void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) {
-  uint32_t i, k = 0;
+  uint32_t i, j, k = 0;
 
   ctx->operation = operation;
   
@@ -48,23 +49,20 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
     ctx->position = 0;
   }
   
-  /* write data in table */
   for (i = 0; i < KEY_LENGTH; ++i) {
     ctx->table[i] = (uint8_t)i;
   }
   
-  /* swap bytes key table*/
   for (i = 0; i < KEY_LENGTH; ++i) {
     k = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k % BLOCK_SIZE] + k;
     
     swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k % KEY_LENGTH]);
   }
   
-  /* make whitening table */
   for (i = 0; i < 4; i++) {
     ctx->white[i] = 0x00000000;
     
-    for (int j = 0; j < (KEY_LENGTH / 4); j += 4) {
+    for (j = 0; j < (KEY_LENGTH / 4); j += 4) {
       ctx->white[i] ^= *(((uint32_t *)&ctx->table[0]) + i + j);
     }
   }
@@ -103,7 +101,7 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X) {
   }
 */
   uint8_t t = ctx->table[(X >> 24) ^ (X & 0x000000FF)];
-          t = (X + (uint32_t)t) ^ (uint32_t)(zbox[t % BLOCK_SIZE]);
+          t = (X + (uint32_t)t) ^ (uint32_t)(zbox[t & (BLOCK_SIZE - 1)]);
           
   return (uint32_t)(X * t);
 }
@@ -201,21 +199,23 @@ void sonne(uint8_t * temp) {
   из 256-байтного ключа шифрования.
 */
 void whitening(ANEMONE_CTX * ctx, uint8_t * temp) {
-  uint32_t * ptemp = (uint32_t *)temp;
-  
-  for (int i = 0; i < 4; i++) {
+  int i;
+  uint32_t * ptemp = (uint32_t *)temp;  
+
+  for (i = 0; i < 4; i++) {
     *(ptemp + i) ^= ctx->white[i];
   }
 }
 
 void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
+  int i;
   uint8_t temp[BLOCK_SIZE];
 
   memcpy(temp, in, BLOCK_SIZE);
   
   whitening(ctx, temp);
   
-  for (int i = 0; i < Rounds; ++i) {
+  for (i = 0; i < Rounds; ++i) {
     sp_en(ctx, temp);
     sonne(temp);
     
@@ -226,11 +226,12 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
 }
 
 void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
+  int i;
   uint8_t temp[BLOCK_SIZE];
   
   memcpy(temp, in, BLOCK_SIZE);
   
-  for (int i = 0; i < Rounds; ++i) {
+  for (i = 0; i < Rounds; ++i) {
     sonne(temp);
     sp_de(ctx, temp);
     
