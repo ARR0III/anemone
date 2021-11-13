@@ -1,29 +1,13 @@
 #include <time.h>
-
-#ifndef _C_STDIO_H_
-#define _C_STDIO_H_
-  #include <stdio.h>
-#endif
-
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-
-#ifndef _C_STDLIB_H_
-#define _C_STDLIB_H_
-  #include <stdlib.h>
-#endif
-
-#ifndef _C_STRING_H_
-#define _C_STRING_H_
-  #include <string.h>
-#endif
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "src/anemone.c"
 
-#define BUFFER_SIZE (1024 * 64)
-#define BLOCK_SIZE          16
+#define BUFFER_SIZE (1024 * 1024)
+#define BLOCK_SIZE            16
 
 typedef struct {
   uint8_t input  [BUFFER_SIZE];
@@ -31,6 +15,8 @@ typedef struct {
 } DATA;
 
 int main (int argc, char * argv[]) {
+
+  printf("PlexusTCL block cipher Anemone-1.\n");
 
   if (5 != argc) {
     printf("command: %s [input] [output] [-e/d] [password]\n", argv[0]);
@@ -56,12 +42,13 @@ int main (int argc, char * argv[]) {
   }
   
   FILE * fi = fopen(argv[1], "rb");
-  FILE * fo = fopen(argv[2], "wb");
   
   if (NULL == fi) {
     printf("file \"%s\" not openned!\n", (char *)argv[1]);
     return -3;
   }
+  
+  FILE * fo = fopen(argv[2], "wb");
   
   if (NULL == fo) {
     printf("file \"%s\" not openned!\n", (char *)argv[2]);
@@ -82,7 +69,7 @@ int main (int argc, char * argv[]) {
     return -5;
   }
   
-  anemone_init(ctx, (uint8_t *)argv[4], strlen(argv[4]), 0x00);
+  anemone_init(ctx, (uint8_t *)argv[4], strnlen(argv[4], 256), 0x00);
   
   uint8_t iv[BLOCK_SIZE];
 
@@ -106,9 +93,7 @@ int main (int argc, char * argv[]) {
   
   //printhex(HEX_STRING, iv, BLOCK_SIZE);
   
-  while (1) {
-    read = fread(data->input, 1, BUFFER_SIZE, fi);
-
+  while ((read = fread(data->input, 1, BUFFER_SIZE, fi)) == BUFFER_SIZE) {
     for (size_t i = 0; i < read; i += BLOCK_SIZE) {
       anemone_encrypt(ctx, iv, data->output + i);
       strxor(data->output + i, data->input + i, BLOCK_SIZE);
@@ -117,10 +102,6 @@ int main (int argc, char * argv[]) {
     
     fwrite(data->output, 1, read, fo);
     fflush(fo);
-    
-    if (read < BUFFER_SIZE) {
-      break;
-    }
   }
   
   fclose(fi);
