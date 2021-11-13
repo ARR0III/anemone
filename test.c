@@ -1,22 +1,7 @@
-#ifndef _C_STDIO_H_
-#define _C_STDIO_H_
-  #include <stdio.h>
-#endif
-
-#ifndef _C_STDINT_H_
-#define _C_STDINT_H_
-  #include <stdint.h>
-#endif  
-
-#ifndef _C_STDLIB_H_
-#define _C_STDLIB_H_
-  #include <stdlib.h>
-#endif
-
-#ifndef _C_STRING_H_
-#define _C_STRING_H_
-  #include <string.h>
-#endif
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "src/anemone.c"
 
