@@ -90,7 +90,7 @@ void pos_en(ANEMONE_CTX * ctx) {
  * 32-битную часть ключа на 24 бита, после получая индекс таблицы размытия
  * от 0 до 15, складывая его с шифротекстом/открытым текстом, давая t.
  * 
- * Далее ключ ксорится с сдивигаемым (в право/в лево) значением t,
+ * Далее ключ ксорится с сдивигаемым влево значением t,
  * и объединяется с результатом предыдущей операции.
  * 
  * Далее из 256 байтной таблицы берется некое число, индекс которого получен
@@ -234,7 +234,7 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     sp_en(ctx, temp);
     sonne(temp);
     
-    printhex(HEX_STRING, temp, BLOCK_SIZE);
+    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
 
   whitening(ctx, temp);
@@ -254,7 +254,7 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     sonne(temp);
     sp_de(ctx, temp);
 
-    printhex(HEX_STRING, temp, BLOCK_SIZE);
+    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
 
   whitening(ctx, temp);
