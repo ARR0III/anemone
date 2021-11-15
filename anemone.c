@@ -12,7 +12,7 @@
 
 #include "xtalw.h"
 
-#define Rounds      32 /* 16 Rounds = OK */
+#define Rounds      32 /* 8 or 16 Rounds = OK */
 #define BLOCK_SIZE  16
 #define KEY_LENGTH 256
 
@@ -51,7 +51,6 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
   
   for (i = 0; i < KEY_LENGTH; ++i) {
     ctx->table[i] = (uint8_t)i;
-    if ((i & 255) > 255) {printf("ERROR\n");}
   }
   
   for (i = 0; i < KEY_LENGTH; ++i) {
