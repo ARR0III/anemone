@@ -13,15 +13,15 @@ int main (void) {
     return -1;
   }
   
-  uint8_t password[]      = "aaaaaaaaaaaaaaaa";
+  uint8_t password[]      = "/x00/x00/x00/x00/x00/x00/x00/x00"
+                            "/x00/x00/x00/x00/x00/x00/x00/x00";
   uint8_t out[BLOCK_SIZE] = {0x00};
   uint8_t in [BLOCK_SIZE] = {0x00};
 
   anemone_init(ctx, password, 16, 0x00);
   
   printf("KEY:\n");
-  printhex(HEX_TABLE, (char*)ctx + (sizeof(int32_t) * 4) + (sizeof(int32_t) * 2), 
-                         ctx_len - (sizeof(int32_t) * 4) - (sizeof(int32_t) * 2));
+  printhex(HEX_TABLE, ctx->table, 256);
   
   printf("PT:");
   printhex(HEX_STRING, in, BLOCK_SIZE);
@@ -31,9 +31,14 @@ int main (void) {
   printhex(HEX_STRING, out, BLOCK_SIZE);
   
   
-  in[0]++;
+  //in[0]++;
+  password[0]++;
   
   anemone_init(ctx, password, 16, 0x00);
+
+  printf("KEY:\n");
+  printhex(HEX_TABLE, ctx->table, 256);
+
   anemone_encrypt(ctx, in, out);
   
   printf("CT:");
