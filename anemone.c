@@ -51,12 +51,13 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
   
   for (i = 0; i < KEY_LENGTH; ++i) {
     ctx->table[i] = (uint8_t)i;
+    if ((i & 255) > 255) {printf("ERROR\n");}
   }
   
   for (i = 0; i < KEY_LENGTH; ++i) {
-    k = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k % BLOCK_SIZE] + k;
+    k = key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + zbox[k & 15] + k;
     
-    swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k % KEY_LENGTH]);
+    swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k & 255]);
   }
   
   for (i = 0; i < 4; i++) {
@@ -84,29 +85,46 @@ void pos_en(ANEMONE_CTX * ctx) {
   }
 }
 
-/*
-  Функция FX(x) создает 32-битную гамму, зависящую от
-  открытого текста/шифротекста, 8-битного значения таблицы
-  "размытия" и байта ключа шифрования, для последующего
-  объединения битовым xor с 32-битным значением раундового
-  ключа.
-*/
-uint32_t FX(ANEMONE_CTX * ctx, uint32_t X) {
-/*
-  if x == 0 then {
-    t =  table[0]; ???
-    t = (0 + ???) ^ zbox[???];
-    
-    return (0 * ???); == 0;
-  }
-*/
-  uint8_t t = ctx->table[(X >> 24) ^ (X & 0x000000FF)];
-          t = (X + (uint32_t)t) ^ (uint32_t)(zbox[t & (BLOCK_SIZE - 1)]);
-          
-  return (uint32_t)(X * t);
+/* 
+ * При шифровании/расшифровке 1/4-ой открытого текста, функция FX сдвигает
+ * 32-битную часть ключа на 24 бита, после получая индекс таблицы размытия
+ * от 0 до 15, складывая его с шифротекстом/открытым текстом, давая t.
+ * 
+ * Далее ключ ксорится с сдивигаемым (в право/в лево) значением t,
+ * и объединяется с результатом предыдущей операции.
+ * 
+ * Далее из 256 байтной таблицы берется некое число, индекс которого получен
+ * ксором старшей части числа R1 с младшей частью числа R2
+ *   
+ *   где R1 = a ^ c;
+ *       R2 = b ^ d;
+ * 
+ * Сумма чисел a, b, c, d и t складывается/вычитается при
+ * шифрованни/расшифровке.
+ * 
+ */
+
+uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
+
+  uint32_t a, b, c, d, t;
+
+  uint32_t KEY = *((uint32_t *)(ctx->table + ctx->position) + pos);
+
+  t = X + zbox[(KEY >> 24) & 15]; /* if X = 0 then t = zbox[0..15] */
+
+  a =       KEY ^ (t <<  1);
+  b = (a + (KEY ^ (t <<  8)));
+  c = (b + (KEY ^ (t << 16)));
+  d = (c + (KEY ^ (t << 24)));
+
+  t = ctx->table[((a ^ c) >> 24) ^ ((b ^ d) & 0x000000FF)];
+
+  /* printf("a = %u\nb = %u\nc = %u\nd = %u\n", a,b,c,d); */
+
+  return (a + b + c + d + t);
 }
 
-/* Feistel network for 128 bits */
+/* Feistel network */
 void sp_en(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t t;
     
@@ -116,30 +134,28 @@ void sp_en(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t * L1 = (uint32_t *)temp + 2; // 3
   uint32_t * R1 = (uint32_t *)temp + 3; // 4
   
-  uint32_t KEY;
-  
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 0) ^ FX(ctx, *R0); /* ^ *R0; */
-  *L0 += KEY;
-  /*---------------------------------------------------*/
+
+  *L0 += FX(ctx, *R0, 0);
   
     t = *L0;
   *L0 = *R0;
   *R0 = t;
   
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 1) ^ FX(ctx, *R1); /* ^ *R1; */
-  *L1 += KEY;
-  /*---------------------------------------------------*/
+
+  *L1 += FX(ctx, *R1, 1);
   
     t = *L1;
   *L1 = *R1;
   *R1 = t;
-  
+
+  /*---------------------------------------------------*/
+    
   pos_en(ctx);
 }
 
-/* Feistel network for 128 bits */
+/* Feistel network */
 void sp_de(ANEMONE_CTX * ctx, uint8_t * temp) {
   uint32_t t;
     
@@ -148,29 +164,28 @@ void sp_de(ANEMONE_CTX * ctx, uint8_t * temp) {
   
   uint32_t * L1 = (uint32_t *)temp + 2; // 3
   uint32_t * R1 = (uint32_t *)temp + 3; // 4
-  
-  uint32_t KEY;
-  
+
   /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 0) ^ FX(ctx, *L0); /* ^ *L0; */
-  *R0 -= KEY;
-  /*---------------------------------------------------*/
+
+  *R0 -= FX(ctx, *L0, 0);
   
     t = *L0;
   *L0 = *R0;
   *R0 = t;
+
+  /*---------------------------------------------------*/
   
-  /*---------------------------------------------------*/
-  KEY  = *((uint32_t *)(ctx->table + ctx->position) + 1) ^ FX(ctx, *L1); /* ^ *L1; */
-  *R1 -= KEY;
-  /*---------------------------------------------------*/
+  *R1 -= FX(ctx, *L1, 1);
   
     t = *L1;
   *L1 = *R1;
   *R1 = t;
+
+  /*---------------------------------------------------*/  
   
   pos_de(ctx);
 }
+
 
 /*  1  2  3  4   16  2  3 13
     5  6  7  8    5 11 10  8
@@ -200,7 +215,7 @@ void sonne(uint8_t * temp) {
 */
 void whitening(ANEMONE_CTX * ctx, uint8_t * temp) {
   int i;
-  uint32_t * ptemp = (uint32_t *)temp;  
+  uint32_t * ptemp = (uint32_t *)temp;
 
   for (i = 0; i < 4; i++) {
     *(ptemp + i) ^= ctx->white[i];
@@ -212,30 +227,34 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   uint8_t temp[BLOCK_SIZE];
 
   memcpy(temp, in, BLOCK_SIZE);
-  
+
   whitening(ctx, temp);
   
   for (i = 0; i < Rounds; ++i) {
     sp_en(ctx, temp);
     sonne(temp);
     
-    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
+    printhex(HEX_STRING, temp, BLOCK_SIZE);
   }
-  
+
+  whitening(ctx, temp);
+
   memcpy(out, temp, BLOCK_SIZE);
 }
 
 void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   int i;
   uint8_t temp[BLOCK_SIZE];
-  
+
   memcpy(temp, in, BLOCK_SIZE);
-  
+
+  whitening(ctx, temp);
+
   for (i = 0; i < Rounds; ++i) {
     sonne(temp);
     sp_de(ctx, temp);
-    
-    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
+
+    printhex(HEX_STRING, temp, BLOCK_SIZE);
   }
 
   whitening(ctx, temp);
