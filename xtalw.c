@@ -13,6 +13,17 @@
 #define HEX_TABLE  1
 #define HEX_STRING 0
 
+void chartobits(uint8_t * data, int len) {
+  for (int j = 0; j < len; j++) {
+    uint8_t c = data[j];
+
+    for(int k = 0; k < 8; k++) {
+      putc(48 + ((c >> k) & 0x00000001), stdout);
+    }
+  }
+  putc('\n', stdout);
+}
+
 void strinc(uint8_t * data, int len) {
   while(--len) {
     if (0xFF == data[len]) {

@@ -11,6 +11,8 @@
 
 #include "xtalw.c"
 
+void chartobits(uint8_t * data, int len);
+
 void   strinc(uint8_t * data, int len);
 void   strdec(uint8_t * data, int len);
 
