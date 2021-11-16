@@ -1,11 +1,3 @@
-/*
-  Block crypt algoritm Anemone-1;
-  SP-cipher;
-  
-  block =  16 byte;
-  key   = 256 byte;
-*/
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -89,8 +81,8 @@ void pos_en(ANEMONE_CTX * ctx) {
  * 32-битную часть ключа на 24 бита, после получая индекс таблицы размытия
  * от 0 до 15, складывая его с шифротекстом/открытым текстом, давая t.
  * 
- * Далее ключ ксорится с сдивигаемым влево значением t, и объединяется с
- * результатом предыдущей операции.
+ * Далее ключ ксорится с сдивигаемым влево значением t,
+ * и объединяется с результатом предыдущей операции.
  * 
  * Далее из 256 байтной таблицы берется некое число, индекс которого получен
  * ксором старшей части числа R1 с младшей частью числа R2
@@ -100,8 +92,8 @@ void pos_en(ANEMONE_CTX * ctx) {
  * 
  * Сумма чисел a, b, c, d и t складывается/вычитается при
  * шифрованни/расшифровке.
+ * 
  */
-
 uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 
   uint32_t a, b, c, d, t;
@@ -110,12 +102,14 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 
   t = X + zbox[(KEY >> 24) & 15]; /* if X = 0 then t = zbox[0..15] */
 
-  a =       KEY ^ (t <<  1);
-  b = (a + (KEY ^ (t <<  8)));
-  c = (b + (KEY ^ (t << 16)));
-  d = (c + (KEY ^ (t << 24)));
+  a =      KEY ^ (t <<  1);
+  b = a + (KEY ^ (t <<  8));
+  c = b + (KEY ^ (t << 16));
+  d = c + (KEY ^ (t << 24));
 
   t = ctx->table[((a ^ c) >> 24) ^ ((b ^ d) & 0x000000FF)];
+
+  /* printf("a = %u\nb = %u\nc = %u\nd = %u\n", a,b,c,d); */
 
   return (a + b + c + d + t);
 }
@@ -198,11 +192,12 @@ void sonne(uint8_t * temp) {
   temp[6] = temp[9];
   temp[9] = t;
 }
+
 /*
-  Процедура отбеливания входных данных,
-  объединением с white-таблицей, сгенерированной
-  из 256-байтного ключа шифрования.
-*/
+ * Процедура отбеливания входных данных,
+ * объединением с white-таблицей, сгенерированной
+ * из 256-байтного ключа шифрования.
+ */
 void whitening(ANEMONE_CTX * ctx, uint8_t * temp) {
   int i;
   uint32_t * ptemp = (uint32_t *)temp;
@@ -223,8 +218,11 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   for (i = 0; i < Rounds; ++i) {
     sp_en(ctx, temp);
     sonne(temp);
+
+    /* chartobits(temp, BLOCK_SIZE);
     
-    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
+       printf("[Round %2d]:", i + 1);
+       printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
 
   whitening(ctx, temp);
@@ -244,7 +242,10 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     sonne(temp);
     sp_de(ctx, temp);
 
-    /* printhex(HEX_STRING, temp, BLOCK_SIZE); */
+    /* chartobits(temp, BLOCK_SIZE);
+    
+       printf("[Round %2d]:", i + 1);
+       printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
 
   whitening(ctx, temp);
