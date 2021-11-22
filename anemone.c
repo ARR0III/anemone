@@ -8,6 +8,9 @@
 #define BLOCK_SIZE  16
 #define KEY_LENGTH 256
 
+#define ROR(x, n)  (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
+#define ROL(x, n)  (((x) << ((int)(n))) | ((x) >> (32 - (int)(n))))
+
 typedef struct {
   int32_t  operation;
   int32_t  position;
@@ -50,7 +53,11 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
     
     swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k & 255]);
   }
-  
+ 
+  for (i = 0; i < KEY_LENGTH; ++i) {
+    ctx->table[i] ^= key[i % key_len];
+  }
+ 
   for (i = 0; i < 4; i++) {
     ctx->white[i] = 0x00000000;
     
@@ -99,17 +106,17 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
   uint32_t a, b, c, d, t;
 
   uint32_t KEY = *((uint32_t *)(ctx->table + ctx->position) + pos);
+/*
+  if X = 0 then t = X + zbox[0..15]
+*/
+  t = X + (uint32_t)zbox[(KEY >> 24) & 15];
 
-  t = X + zbox[(KEY >> 24) & 15]; /* if X = 0 then t = zbox[0..15] */
-
-  a =      KEY ^ (t <<  1);
-  b = a + (KEY ^ (t <<  8));
-  c = b + (KEY ^ (t << 16));
-  d = c + (KEY ^ (t << 24));
+  a =     (KEY ^ ROR(t, 1));
+  b = a + (KEY ^ ROR(t, 2));
+  c = b + (KEY ^ ROR(t, 6));
+  d = c + (KEY ^ ROR(t, 7));
 
   t = ctx->table[((a ^ c) >> 24) ^ ((b ^ d) & 0x000000FF)];
-
-  /* printf("a = %u\nb = %u\nc = %u\nd = %u\n", a,b,c,d); */
 
   return (a + b + c + d + t);
 }
@@ -126,16 +133,14 @@ void sp_en(ANEMONE_CTX * ctx, uint8_t * temp) {
   
   /*---------------------------------------------------*/
 
-  *L0 += FX(ctx, *R0, 0);
-  *L1 += FX(ctx, *R1, 1);  
+  *R0 += FX(ctx, *L0, 0);
+  *R1 += FX(ctx, *L1, 1);
 
     t = *L0;
-  *L0 = *R0;
+  *L0 = *R1;
+  *R1 = *L1;
+  *L1 = *R0;
   *R0 = t;
-  
-    t = *L1;
-  *L1 = *R1;
-  *R1 = t;
 
   /*---------------------------------------------------*/
     
@@ -154,50 +159,25 @@ void sp_de(ANEMONE_CTX * ctx, uint8_t * temp) {
 
   /*---------------------------------------------------*/
 
-  *R0 -= FX(ctx, *L0, 0);
-  *R1 -= FX(ctx, *L1, 1);  
-
     t = *L0;
   *L0 = *R0;
-  *R0 = t;
-  
-    t = *L1;
+  *R0 = *L1;
   *L1 = *R1;
   *R1 = t;
+
+  *R0 -= FX(ctx, *L0, 0);
+  *R1 -= FX(ctx, *L1, 1);
 
   /*---------------------------------------------------*/  
   
   pos_de(ctx);
 }
 
-
-/*  1  2  3  4   16  2  3 13
-    5  6  7  8    5 11 10  8
-    9 10 11 12    9  7  6 12
-   13 14 15 16 -> 4 14 15  1 */
-void sonne(uint8_t * temp) {
-  uint8_t t = temp[3];
-  temp[3] = temp[12];
-  temp[12] = t;
-  
-  t = temp[0];
-  temp[0] = temp[15];
-  temp[15] = t;
-  
-  t = temp[5];
-  temp[5] = temp[10];
-  temp[10] = t;
-  
-  t = temp[6];
-  temp[6] = temp[9];
-  temp[9] = t;
-}
-
 /*
- * Процедура отбеливания входных данных,
- * объединением с white-таблицей, сгенерированной
- * из 256-байтного ключа шифрования.
- */
+  Процедура отбеливания входных данных,
+  объединением с white-таблицей, сгенерированной
+  из 256-байтного ключа шифрования.
+*/
 void whitening(ANEMONE_CTX * ctx, uint8_t * temp) {
   int i;
   uint32_t * ptemp = (uint32_t *)temp;
@@ -217,12 +197,6 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   
   for (i = 0; i < Rounds; ++i) {
     sp_en(ctx, temp);
-    sonne(temp);
-
-    /* chartobits(temp, BLOCK_SIZE);
-    
-       printf("[Round %2d]:", i + 1);
-       printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
 
   whitening(ctx, temp);
@@ -239,13 +213,7 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   whitening(ctx, temp);
 
   for (i = 0; i < Rounds; ++i) {
-    sonne(temp);
     sp_de(ctx, temp);
-
-    /* chartobits(temp, BLOCK_SIZE);
-    
-       printf("[Round %2d]:", i + 1);
-       printhex(HEX_STRING, temp, BLOCK_SIZE); */
   }
 
   whitening(ctx, temp);
