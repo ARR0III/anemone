@@ -1,4 +1,4 @@
-# Anemone-1
+# Anemone
 
 [ENGLISH LANGUAGE]
 
