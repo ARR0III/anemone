@@ -79,6 +79,7 @@ int main (int argc, char * argv[]) {
     srand(time(NULL));
     
     for (int i = 0; i < BLOCK_SIZE; i++) {
+      *((uint32_t *)iv) ^= read;
       iv[i] ^= (uint8_t)genrand(0x00, 0xFF);
     }
     
@@ -93,7 +94,9 @@ int main (int argc, char * argv[]) {
   
   //printhex(HEX_STRING, iv, BLOCK_SIZE);
   
-  while ((read = fread(data->input, 1, BUFFER_SIZE, fi)) == BUFFER_SIZE) {
+  do {
+    read = fread(data->input, 1, BUFFER_SIZE, fi);
+
     for (size_t i = 0; i < read; i += BLOCK_SIZE) {
       anemone_encrypt(ctx, iv, data->output + i);
       strxor(data->output + i, data->input + i, BLOCK_SIZE);
@@ -102,7 +105,8 @@ int main (int argc, char * argv[]) {
     
     fwrite(data->output, 1, read, fo);
     fflush(fo);
-  }
+
+  } while (read == BUFFER_SIZE);
   
   fclose(fi);
   fclose(fo);

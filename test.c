@@ -13,13 +13,15 @@ int main (void) {
     return -1;
   }
   
-  uint8_t password[]      = "/x00/x00/x00/x00/x00/x00/x00/x00"
-                            "/x00/x00/x00/x00/x00/x00/x00/x00";
+  uint8_t password[BLOCK_SIZE] = {0x00};
+
   uint8_t out[BLOCK_SIZE] = {0x00};
   uint8_t in [BLOCK_SIZE] = {0x00};
 
+  //chartobits(password, 16);
+
   anemone_init(ctx, password, 16, 0x00);
-  
+
   printf("KEY:\n");
   printhex(HEX_TABLE, ctx->table, 256);
   
@@ -29,13 +31,13 @@ int main (void) {
   anemone_encrypt(ctx, in, out);
   printf("CT:");
   printhex(HEX_STRING, out, BLOCK_SIZE);
+  chartobits(out, BLOCK_SIZE);
   
-  
-  //in[0]++;
-  password[0]++;
+  in[0]++;
+  //password[0]++;
   
   anemone_init(ctx, password, 16, 0x00);
-
+  
   printf("KEY:\n");
   printhex(HEX_TABLE, ctx->table, 256);
 
@@ -43,7 +45,8 @@ int main (void) {
   
   printf("CT:");
   printhex(HEX_STRING, out, BLOCK_SIZE);
-  
+  chartobits(out, BLOCK_SIZE);  
+
   anemone_init(ctx, password, 16, 0xDE);
   anemone_decrypt(ctx, out, in);
   
