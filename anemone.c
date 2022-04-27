@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "xtalw.h"
-
 /* Author: ARR0III ("Igor' Solovyov");
  * Modification: 28.04.2022; 01:58; +0700; Krasnoyarsk, Russia;
  *
@@ -101,7 +99,7 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 }
 
 void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
-  uint32_t i;
+  register int i;
 
   uint32_t L0 = *((uint32_t *)in + 0); // 1
   uint32_t R0 = *((uint32_t *)in + 1); // 2
@@ -143,7 +141,7 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
 }
 
 void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
-  int i;
+  register int i;
 
   uint32_t L0 = *((uint32_t *)in + 0); // 1
   uint32_t R0 = *((uint32_t *)in + 1); // 2
