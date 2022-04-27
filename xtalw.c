@@ -13,17 +13,11 @@
 #define HEX_TABLE  1
 #define HEX_STRING 0
 
-/* ROR and ROL only for unsigned 32-bits */
-#define ROR(x, n)  (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
-#define ROL(x, n)  (((x) << ((int)(n))) | ((x) >> (32 - (int)(n))))
-
 void chartobits(uint8_t * data, int len) {
-  int j, k;
-
-  for (j = 0; j < len; j++) {
+  for (int j = 0; j < len; j++) {
     uint8_t c = data[j];
 
-    for (k = 0; k < 8; k++) {
+    for(int k = 0; k < 8; k++) {
       putc((48 + ((c >> k) & 0x00000001)), stdout);
     }
   }
@@ -55,6 +49,7 @@ void strdec(uint8_t * data, int len) {
     }
   }
 }
+
 
 int genrand(const int min, const int max) {
   return (int)(rand() % (max - min + 1) + min);
