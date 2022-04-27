@@ -11,7 +11,7 @@
  * Key size: 1-2048 bits;
  * Architecture: Feistel network;
  *
- * P.S: Thank you, Bruce Schneier and Ronald Rivest!;
+ * P.S: Thanks for your work, Bruce Schneier and Ronald Rivest!;
  */
 
 #define Rounds      32
