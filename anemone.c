@@ -4,7 +4,7 @@
 #include "xtalw.h"
 
 /* Author: ARR0III ("Igor' Solovyov");
- * Modification: 27.04.2022; 23:36; +0700; Krasnoyarsk, Russia;
+ * Modification: 28.04.2022; 01:58; +0700; Krasnoyarsk, Russia;
  *
  * Block cipher name: Anemone;
  * Version: 2;
@@ -127,12 +127,6 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     R0 = t;
 
     ctx->position += (BLOCK_SIZE / 2);
-
-  *((uint32_t *)out + 0) = L0;
-  *((uint32_t *)out + 1) = R0;
-  *((uint32_t *)out + 2) = L1;
-  *((uint32_t *)out + 3) = R1;
-    printhex(HEX_STRING, out, 16);
   }
 
   ctx->position = 0;
