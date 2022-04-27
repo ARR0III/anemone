@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "xtalw.h"
+
 /* Author: ARR0III ("Igor' Solovyov");
  * Modification: 27.04.2022; 23:36; +0700; Krasnoyarsk, Russia;
  *
@@ -86,7 +88,7 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 
   uint32_t KEY = *((uint32_t *)(ctx->table + ctx->position) + pos);
 
-  t = X + (uint32_t)zbox[(KEY >> 24) & 31];
+  t = X + zbox[X & 1][KEY & 3];
 
   a =     (KEY ^ ROR(t, 1));
   b = a + (KEY ^ ROR(t, 2));
@@ -125,6 +127,12 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     R0 = t;
 
     ctx->position += (BLOCK_SIZE / 2);
+
+  *((uint32_t *)out + 0) = L0;
+  *((uint32_t *)out + 1) = R0;
+  *((uint32_t *)out + 2) = L1;
+  *((uint32_t *)out + 3) = R1;
+    printhex(HEX_STRING, out, 16);
   }
 
   ctx->position = 0;
