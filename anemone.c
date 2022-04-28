@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 /* Author: ARR0III ("Igor' Solovyov");
- * Modification: 28.04.2022; 01:58; +0700; Krasnoyarsk, Russia;
+ * Modification: 28.04.2022; 13:42; +0700; Krasnoyarsk, Russia;
  *
  * Block cipher name: Anemone;
  * Version: 2;
@@ -119,10 +119,10 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     R1 += FX(ctx, L1, 1);
 
      t = L0;
-    L0 = R1;
-    R1 = L1;
-    L1 = R0;
-    R0 = t;
+    L0 = R0;
+    R0 = L1;
+    L1 = R1;
+    R1 = t;
 
     ctx->position += (BLOCK_SIZE / 2);
   }
@@ -134,10 +134,10 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   L1 ^= ctx->white[1][2];
   R1 ^= ctx->white[1][3];
 
-  *((uint32_t *)out + 0) = L0; // 1
-  *((uint32_t *)out + 1) = R0; // 2
-  *((uint32_t *)out + 2) = L1; // 3
-  *((uint32_t *)out + 3) = R1; // 4
+  *((uint32_t *)out + 0) = L0;
+  *((uint32_t *)out + 1) = R0;
+  *((uint32_t *)out + 2) = L1;
+  *((uint32_t *)out + 3) = R1;
 }
 
 void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
@@ -155,11 +155,11 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
 
   for (i = 0; i < Rounds; ++i) {
     uint32_t t = L0;
-
-    L0 = R0;
-    R0 = L1;
-    L1 = R1;
-    R1 = t;
+   
+    L0 = R1;
+    R1 = L1;
+    L1 = R0;
+    R0 = t;
 
     R0 -= FX(ctx, L0, 0);
     R1 -= FX(ctx, L1, 1);
@@ -174,8 +174,8 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   L1 ^= ctx->white[0][2];
   R1 ^= ctx->white[0][3];
 
-  *((uint32_t *)out + 0) = L0; // 1
-  *((uint32_t *)out + 1) = R0; // 2
-  *((uint32_t *)out + 2) = L1; // 3
-  *((uint32_t *)out + 3) = R1; // 4
+  *((uint32_t *)out + 0) = L0;
+  *((uint32_t *)out + 1) = R0;
+  *((uint32_t *)out + 2) = L1;
+  *((uint32_t *)out + 3) = R1;
 }
