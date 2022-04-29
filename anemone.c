@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 /* Author: ARR0III ("Igor' Solovyov");
- * Modification: 28.04.2022; 13:42; +0700; Krasnoyarsk, Russia;
+ * Modification: 29.04.2022; 22:13; +0700; Krasnoyarsk, Russia;
  *
  * Block cipher name: Anemone;
  * Version: 2;
@@ -14,7 +14,7 @@
  * P.S: Thanks for your work, Bruce Schneier and Ronald Rivest!;
  */
 
-#define Rounds      32
+#define Rounds      32 /* This is max rounds! Change to 1 do 32 */
 #define BLOCK_SIZE  16
 #define KEY_LENGTH 256
 
@@ -50,7 +50,7 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
   ctx->operation = operation;
 
   if (operation == 0xDE) {
-    ctx->position = KEY_LENGTH - (BLOCK_SIZE / 2);
+    ctx->position = (8 * Rounds) - (BLOCK_SIZE / 2);
   }
   else {
     ctx->position = 0;
@@ -167,7 +167,7 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
     ctx->position -= (BLOCK_SIZE / 2);
   }
 
-  ctx->position = KEY_LENGTH - (BLOCK_SIZE / 2);
+  ctx->position = (8 * Rounds) - (BLOCK_SIZE / 2);
 
   L0 ^= ctx->white[0][0];
   R0 ^= ctx->white[0][1];
