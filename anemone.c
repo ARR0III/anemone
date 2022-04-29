@@ -6,7 +6,7 @@
  *
  * Block cipher name: Anemone;
  * Version: 2;
- * Rounds: 32;
+ * Rounds: 8-32;
  * Block size: 128 bits;
  * Key size: 1-2048 bits;
  * Architecture: Feistel network;
@@ -62,7 +62,7 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
 
   for (i = 0; i < KEY_LENGTH; ++i) { /* begin k = 0 */
     k += key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + i;
-    swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k & 255]);
+    swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k & 0xFF]);
   }
 
   for (i = 0; i < KEY_LENGTH; ++i) {
@@ -86,14 +86,14 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 
   uint32_t KEY = *((uint32_t *)(ctx->table + ctx->position) + pos);
 
-  t = X + zbox[X & 1][KEY & 3];
+  t = X + zbox[X & 0x01][KEY & 0x03];
 
   a =     (KEY ^ ROR(t, 1));
   b = a + (KEY ^ ROR(t, 2));
   c = b + (KEY ^ ROR(t, 6));
   d = c + (KEY ^ ROR(t, 7));
 
-  t = ctx->table[((a ^ c) >> 24) ^ ((b ^ d) & 0x000000FF)];
+  t = ctx->table[((a ^ c) >> 24) ^ ((b ^ d) & 0xFF)];
 
   return (a + b + c + d + t);
 }
