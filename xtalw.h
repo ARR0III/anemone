@@ -19,6 +19,8 @@ void   strdec(uint8_t * data, int len);
 int    genrand(const int min, const int max);
 int    readfromfile(const char * filename, void * buffer, const size_t length);
 
+void   phex(int tumbler, const uint8_t * data, size_t length);
+
 size_t printhex(const int tumbler, const void * data, size_t length);
 size_t x_strnlen(const char * string, size_t length);
 

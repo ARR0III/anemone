@@ -17,7 +17,7 @@ void chartobits(uint8_t * data, int len) {
   for (int j = 0; j < len; j++) {
     uint8_t c = data[j];
 
-    for(int k = 0; k < 8; k++) {
+    for(int k = 7; k >= 0; --k) {
       putc((48 + ((c >> k) & 0x00000001)), stdout);
     }
   }
@@ -126,6 +126,30 @@ void * strxor(uint8_t * output, const uint8_t * input, size_t length) {
   return output;
 }
 
+void phex(int tumbler, const uint8_t * data, size_t length) {
+  size_t i;
+
+  int left, right, symbol = -1;
+  const char digits[] = "0123456789ABCDEF";
+
+  for (i = 0; i < length; ++i) {
+    symbol = (int)data[i];
+
+    left  = symbol >> 0x04; /* 11000011 >> 0x04 = 00001100 */
+    right = symbol  & 0x0F; /* 11000011  & 0x0F = 00000011 */
+
+    putc(digits[left],  stdout);
+    putc(digits[right], stdout);
+
+    if (HEX_TABLE == tumbler) {
+      putc(((i + 1) % 16) ? ' ' : '\n', stdout);
+    }
+  }
+
+  if (-1 != symbol)
+    putc('\n', stdout);
+}
+
 size_t printhex(const int tumbler, const void * data, size_t length) {
 
   size_t i = 0;
@@ -138,7 +162,7 @@ size_t printhex(const int tumbler, const void * data, size_t length) {
   temp = (uint8_t *)data;
 
   if (HEX_TABLE == tumbler) {
-    for (; i < length; ++i) {
+    for (i = 0; i < length; ++i) {
       (void)printf("%02X%c", temp[i], (((i + 1) % 16) ? ' ' : '\n'));
     }
   }
