@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-/* Author: ARR0III ("Igor' Solovyov");
+#include "anemone.h"
+
+/* Author: ARR0III;
  * Modification: 29.04.2022; 22:13; +0700; Krasnoyarsk, Russia;
  *
  * Block cipher name: Anemone;
@@ -16,36 +18,18 @@
 
 #define Rounds      32 /* This is max rounds! Change to 1 do 32 */
 #define BLOCK_SIZE  16
-#define KEY_LENGTH 256
 
 #define ROR(x, n)  (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
 #define ROL(x, n)  (((x) << ((int)(n))) | ((x) >> (32 - (int)(n))))
-
-typedef struct {
-  int32_t  operation;
-  int32_t  position;
-  uint32_t white[2][4];
-  uint8_t  table[KEY_LENGTH];
-} ANEMONE_CTX;
 
 uint32_t zbox[2][4] = { /* sha256sum("Veritas vos liberabit") */
   {0x93B3A436, 0x97353B17, 0x8BCDAA75, 0xFE210D89},
   {0x5C908450, 0x60B9E2BF, 0xCF34D1A8, 0x5DBD8EA0}
 };
 
-void swap (uint8_t * a, uint8_t * b) {
-  if (*a == *b) {
-    return;
-  }
-
-  uint8_t t = *a;
-
-  *a = *b;
-  *b = t;
-}
-
 void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) {
   uint32_t i, j, k = 0;
+  uint8_t t;
 
   ctx->operation = operation;
 
@@ -62,7 +46,10 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
 
   for (i = 0; i < KEY_LENGTH; ++i) { /* begin k = 0 */
     k += key[i % key_len] + ctx->table[i % KEY_LENGTH] + key_len + i;
-    swap((uint8_t *)&ctx->table[i], (uint8_t *)&ctx->table[k & 0xFF]);
+
+    t  = ctx->table[i];
+    ctx->table[i] = ctx->table[k & 0xFF];
+    ctx->table[k & 0xFF] = t;
   }
 
   for (i = 0; i < KEY_LENGTH; ++i) {
@@ -79,6 +66,8 @@ void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation) 
     }
   }
 }
+
+#undef KEY_LENGTH
 
 uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 
@@ -97,6 +86,9 @@ uint32_t FX(ANEMONE_CTX * ctx, uint32_t X, int pos) {
 
   return (a + b + c + d + t);
 }
+
+#undef ROR
+#undef ROL
 
 void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   register int i;
@@ -179,3 +171,6 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   *((uint32_t *)out + 2) = L1;
   *((uint32_t *)out + 3) = R1;
 }
+
+#undef Rounds
+#undef BLOCK_SIZE

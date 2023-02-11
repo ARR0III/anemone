@@ -1,13 +1,20 @@
 #ifndef ANEMONE_H
 #define ANEMONE_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
+#define KEY_LENGTH 256
 
-#include "anemone.c"
+typedef struct {
+  int32_t  operation;
+  int32_t  position;
+  uint32_t white[2][4];
+  uint8_t  table[KEY_LENGTH];
+} ANEMONE_CTX;
 
 void anemone_init(ANEMONE_CTX * ctx, uint8_t * key, int key_len, int operation);
 
