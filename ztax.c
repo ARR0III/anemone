@@ -4,9 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "src/xtalw.h"
-#include "src/anemone.c"
+#include "src/anemone.h"
 
 #define BUFFER_SIZE (1024 * 1024)
 #define BLOCK_SIZE            16
@@ -69,7 +68,14 @@ int main (int argc, char * argv[]) {
     return -5;
   }
 
-  anemone_init(ctx, (uint8_t *)argv[4], strlen(argv[4]), 0x00);
+  int pass_len = strlen(argv[4]);
+
+  if (pass_len > 256) {
+    printf("Password size %d byte!\n", pass_len);
+    pass_len = 256;
+  }
+
+  anemone_init(ctx, (uint8_t *)argv[4], pass_len, 0x00);
 
   uint8_t iv[BLOCK_SIZE];
 
@@ -94,19 +100,20 @@ int main (int argc, char * argv[]) {
 
   //printhex(HEX_STRING, iv, BLOCK_SIZE);
 
-  do {
+  while (1) {
     read = fread(data->input, 1, BUFFER_SIZE, fi);
 
     for (size_t i = 0; i < read; i += BLOCK_SIZE) {
       anemone_encrypt(ctx, iv, data->output + i);
-      strxor(data->output + i, data->input + i, BLOCK_SIZE);
+      memxormove(data->output + i, data->input + i, BLOCK_SIZE);
       memmove(iv, (param ? data->input : data->output) + i, BLOCK_SIZE);
     }
 
     fwrite(data->output, 1, read, fo);
     fflush(fo);
 
-  } while (read == BUFFER_SIZE);
+    if (read < BUFFER_SIZE) break;
+  }
 
   fclose(fi);
   fclose(fo);

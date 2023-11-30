@@ -25,4 +25,4 @@ void anemone_decrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out);
 }
 #endif
 
-#endif ANEMONE_H
+#endif
