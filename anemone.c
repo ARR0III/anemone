@@ -1,6 +1,6 @@
 /*
  * Author: ARR0III;
- * Modification: 09.12.2023; 02:00; +0700; Krasnoyarsk, Russia;
+ * Modification: 09.12.2023; 21:51; +0700; Krasnoyarsk, Russia;
  *
  * Block cipher name: Anemone;
  * Version: 4;
