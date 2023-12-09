@@ -80,8 +80,6 @@ void anemone_encrypt(ANEMONE_CTX * ctx, uint8_t * in, uint8_t * out) {
   uint32_t L1 = *((uint32_t *)in + 2); // 3
   uint32_t R1 = *((uint32_t *)in + 3); // 4
 
-  uint8_t d[16];
-
   L0 ^= ctx->white[0][0];
   R0 ^= ctx->white[0][1];
   L1 ^= ctx->white[0][2];
