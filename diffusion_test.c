@@ -22,34 +22,12 @@ int main (void) {
   uint8_t out[16] = {0x00};
   uint8_t in [16] = {0x00};
 
-  for (int i = 0; i < 256; i++) {
-    printf("[---TEST_VECTOR:%3d---]\n", i);
+    printf("[---TEST_VECTOR:%3d---]\n", 1);
 
     printf("HEX_KEY_TEXT:\n");
     phex(HEX_STRING, password, 16, stdout);
 
-    anemone_init(ctx, password, 16, 0x01);
-
-    printf("HEX_PLAIN_TEXT:\n");
-    phex(HEX_STRING, in, 16, stdout);
-
-    anemone_encrypt(ctx, in, out);
-
-    /*arraytobits(out, 16, stdout);*/
-
-    printf("HEX_CIPHER_TEXT:\n");
-    phex(HEX_STRING, out, 16, stdout);
-    printf("\n");
-
-    password[15]++;
-  }
-/*
-    printf("[---TEST_VECTOR:%3d---]\n", 2);
-
-    printf("HEX_KEY_TEXT:\n");
-    phex(HEX_STRING, password, 16, stdout);
-
-    anemone_init(ctx, password, 16, 0x01);
+    anemone_init(ctx, password, 16, ANEMONE_ENCRYPT);
 
     printf("HEX_PLAIN_TEXT:\n");
     phex(HEX_STRING, in, 16, stdout);
@@ -62,6 +40,26 @@ int main (void) {
     phex(HEX_STRING, out, 16, stdout);
     printf("\n");
 
+    in[15]++;
+
+    printf("[---TEST_VECTOR:%3d---]\n", 2);
+
+    printf("HEX_KEY_TEXT:\n");
+    phex(HEX_STRING, password, 16, stdout);
+
+    anemone_init(ctx, password, 16, ANEMONE_ENCRYPT);
+
+    printf("HEX_PLAIN_TEXT:\n");
+    phex(HEX_STRING, in, 16, stdout);
+
+    anemone_encrypt(ctx, in, out);
+
+    arraytobits(out, 16, stdout);
+
+    printf("HEX_CIPHER_TEXT:\n");
+    phex(HEX_STRING, out, 16, stdout);
+    printf("\n");
+/*
     in[15]--;
     password[15]++;
 
@@ -70,14 +68,12 @@ int main (void) {
     printf("HEX_KEY_TEXT:\n");
     phex(HEX_STRING, password, 16, stdout);
 
-    anemone_init(ctx, password, 16, 0x01);
+    anemone_init(ctx, password, 16, ANEMONE_ENCRYPT);
 
     printf("HEX_PLAIN_TEXT:\n");
     phex(HEX_STRING, in, 16, stdout);
 
     anemone_encrypt(ctx, in, out);
-
-    arraytobits(out, 16, stdout);
 
     printf("HEX_CIPHER_TEXT:\n");
     phex(HEX_STRING, out, 16, stdout);
